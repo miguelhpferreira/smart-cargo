@@ -1,10 +1,10 @@
 name: Build Android APK
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,31 +12,31 @@ jobs:
 
     defaults:
       run:
-        working-directory: "smart cargo app"
+        working-directory: smart_cargo_app
 
     steps:
-      - name: Checkout
+      - name: Baixar código
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Configurar Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: "17"
 
-      - name: Setup Flutter
+      - name: Configurar Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
 
-      - name: Flutter pub get
+      - name: Instalar dependências
         run: flutter pub get
 
-      - name: Build APK
+      - name: Criar APK
         run: flutter build apk --debug
 
-      - name: Upload APK
+      - name: Salvar APK
         uses: actions/upload-artifact@v4
         with:
           name: smart-cargo-debug-apk
-          path: "smart cargo app/build/app/outputs/flutter-apk/app-debug.apk"
+          path: smart_cargo_app/build/app/outputs/flutter-apk/app-debug.apk
