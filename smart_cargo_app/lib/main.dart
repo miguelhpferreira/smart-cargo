@@ -25,19 +25,37 @@ class SmartCargoApp extends StatelessWidget {
 class Stop {
   final int number;
   final String name;
-  final String address;
+  final String street;
+  final String houseNumber;
   final String type;
   final List<String> packageCodes;
 
   Stop({
     required this.number,
     required this.name,
-    required this.address,
+    required this.street,
+    required this.houseNumber,
     required this.type,
     required this.packageCodes,
   });
 
   int get packages => packageCodes.length;
+
+  String get address => '$street, $houseNumber';
+}
+
+class ManualEntryResult {
+  final String street;
+  final String houseNumber;
+  final String type;
+  final String name;
+
+  ManualEntryResult({
+    required this.street,
+    required this.houseNumber,
+    required this.type,
+    required this.name,
+  });
 }
 
 class HomePage extends StatefulWidget {
@@ -49,6 +67,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final List<Stop> stops = [];
+  Stop? lastStop;
 
   int get totalPackages =>
       stops.fold(0, (total, stop) => total + stop.packageCodes.length);
@@ -59,29 +78,37 @@ class _HomePageState extends State<HomePage> {
   int get residences =>
       stops.where((stop) => stop.type == 'Residência').length;
 
-  Stop? lastStop;
+  int get commerces =>
+      stops.where((stop) => stop.type == 'Comércio').length;
 
   String normalize(String value) {
     return value
         .toLowerCase()
+        .replaceAll('rua ', '')
+        .replaceAll('avenida ', '')
+        .replaceAll('av ', '')
         .replaceAll(RegExp(r'[^a-z0-9 ]'), '')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
   }
 
-  void addScannedPackage(String code) {
-    // Por enquanto, sem OCR.
-    // Todo pacote escaneado cai em uma parada teste.
-    const address = 'Endereço lido pelo código';
-    const name = 'Pacote escaneado';
-    const type = 'Residência';
+  String stopKey(String street, String number) {
+    return '${normalize(street)}|${normalize(number)}';
+  }
 
-    final normalizedAddress = normalize(address);
+  void addPackage({
+    required String code,
+    required String street,
+    required String houseNumber,
+    required String type,
+    required String name,
+  }) {
+    final newKey = stopKey(street, houseNumber);
 
     Stop? existingStop;
 
     for (final stop in stops) {
-      if (normalize(stop.address) == normalizedAddress) {
+      if (stopKey(stop.street, stop.houseNumber) == newKey) {
         existingStop = stop;
         break;
       }
@@ -94,10 +121,13 @@ class _HomePageState extends State<HomePage> {
         }
         lastStop = existingStop;
       } else {
+        final displayName = name.trim().isEmpty ? type : name.trim();
+
         final newStop = Stop(
           number: stops.length + 1,
-          name: name,
-          address: address,
+          name: displayName,
+          street: street.trim(),
+          houseNumber: houseNumber.trim(),
           type: type,
           packageCodes: [code],
         );
@@ -111,14 +141,39 @@ class _HomePageState extends State<HomePage> {
   Future<void> openScanner() async {
     final result = await Navigator.push<String>(
       context,
-      MaterialPageRoute(
-        builder: (_) => const ScannerPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const ScannerPage()),
     );
 
-    if (result != null && result.isNotEmpty) {
-      addScannedPackage(result);
-    }
+    if (result == null || result.isEmpty) return;
+
+    // Por enquanto, código lido entra em uma parada temporária.
+    // Na próxima etapa, vamos ligar isso ao OCR.
+    addPackage(
+      code: result,
+      street: 'Endereço a identificar',
+      houseNumber: '0',
+      type: 'Outro',
+      name: 'Etiqueta escaneada',
+    );
+  }
+
+  Future<void> openManualEntry() async {
+    final result = await Navigator.push<ManualEntryResult>(
+      context,
+      MaterialPageRoute(builder: (_) => const ManualEntryPage()),
+    );
+
+    if (result == null) return;
+
+    final code = 'manual-${DateTime.now().millisecondsSinceEpoch}';
+
+    addPackage(
+      code: code,
+      street: result.street,
+      houseNumber: result.houseNumber,
+      type: result.type,
+      name: result.name,
+    );
   }
 
   void resetLoad() {
@@ -159,6 +214,8 @@ class _HomePageState extends State<HomePage> {
                 _InfoCard(title: 'Condomínios', value: condominiums),
                 const SizedBox(width: 8),
                 _InfoCard(title: 'Residências', value: residences),
+                const SizedBox(width: 8),
+                _InfoCard(title: 'Comércios', value: commerces),
               ],
             ),
             const SizedBox(height: 20),
@@ -177,7 +234,7 @@ class _HomePageState extends State<HomePage> {
                           style: TextStyle(fontSize: 22),
                         ),
                         SizedBox(height: 8),
-                        Text('Toque em escanear pacote para começar'),
+                        Text('Escaneie ou insira manualmente'),
                       ],
                     )
                   : Column(
@@ -195,11 +252,17 @@ class _HomePageState extends State<HomePage> {
                         ),
                         Text(
                           currentStop.name,
+                          textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        Text(
+                          currentStop.address,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 6),
                         Text(
                           '${currentStop.packages} pacote(s) nesta parada',
                           style: const TextStyle(fontSize: 16),
@@ -215,6 +278,16 @@ class _HomePageState extends State<HomePage> {
                 onPressed: openScanner,
                 icon: const Icon(Icons.qr_code_scanner),
                 label: const Text('Escanear pacote'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: OutlinedButton.icon(
+                onPressed: openManualEntry,
+                icon: const Icon(Icons.edit_location_alt),
+                label: const Text('Inserir manualmente'),
               ),
             ),
             const SizedBox(height: 8),
@@ -236,15 +309,135 @@ class _HomePageState extends State<HomePage> {
 
                   return Card(
                     child: ListTile(
-                      leading: CircleAvatar(
-                        child: Text('${stop.number}'),
-                      ),
+                      leading: CircleAvatar(child: Text('${stop.number}')),
                       title: Text(stop.name),
                       subtitle: Text(stop.address),
                       trailing: Text('📦 ${stop.packages}'),
                     ),
                   );
                 },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ManualEntryPage extends StatefulWidget {
+  const ManualEntryPage({super.key});
+
+  @override
+  State<ManualEntryPage> createState() => _ManualEntryPageState();
+}
+
+class _ManualEntryPageState extends State<ManualEntryPage> {
+  final streetController = TextEditingController();
+  final numberController = TextEditingController();
+  final nameController = TextEditingController();
+
+  String selectedType = 'Residência';
+
+  @override
+  void dispose() {
+    streetController.dispose();
+    numberController.dispose();
+    nameController.dispose();
+    super.dispose();
+  }
+
+  void save() {
+    final street = streetController.text.trim();
+    final number = numberController.text.trim();
+
+    if (street.isEmpty || number.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe rua e número')),
+      );
+      return;
+    }
+
+    Navigator.pop(
+      context,
+      ManualEntryResult(
+        street: street,
+        houseNumber: number,
+        type: selectedType,
+        name: nameController.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final types = ['Residência', 'Condomínio', 'Comércio', 'Outro'];
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Inserir manualmente'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: streetController,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Rua',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: numberController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Número',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Tipo do local',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: types.map((type) {
+                return ChoiceChip(
+                  label: Text(type),
+                  selected: selectedType == type,
+                  onSelected: (_) {
+                    setState(() {
+                      selectedType = type;
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Nome do local (opcional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton.icon(
+                onPressed: save,
+                icon: const Icon(Icons.save),
+                label: const Text('Salvar parada'),
               ),
             ),
           ],
@@ -287,9 +480,7 @@ class _ScannerPageState extends State<ScannerPage> {
       ),
       body: Stack(
         children: [
-          MobileScanner(
-            onDetect: onDetect,
-          ),
+          MobileScanner(onDetect: onDetect),
           Center(
             child: Container(
               width: 280,
@@ -330,15 +521,19 @@ class _InfoCard extends StatelessWidget {
     return Expanded(
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(10),
           child: Column(
             children: [
-              Text(title),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12),
+              ),
               const SizedBox(height: 6),
               Text(
                 '$value',
                 style: const TextStyle(
-                  fontSize: 28,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
