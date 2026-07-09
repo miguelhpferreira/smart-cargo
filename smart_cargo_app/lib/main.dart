@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 void main() {
   runApp(const SmartCargoApp());
@@ -26,15 +27,17 @@ class Stop {
   final String name;
   final String address;
   final String type;
-  int packages;
+  final List<String> packageCodes;
 
   Stop({
     required this.number,
     required this.name,
     required this.address,
     required this.type,
-    this.packages = 1,
+    required this.packageCodes,
   });
+
+  int get packages => packageCodes.length;
 }
 
 class HomePage extends StatefulWidget {
@@ -47,44 +50,33 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final List<Stop> stops = [];
 
-  final List<Map<String, String>> simulatedPackages = [
-    {
-      'name': 'HM Smart',
-      'address': 'Rua 17, 50',
-      'type': 'Condomínio',
-    },
-    {
-      'name': 'HM Smart',
-      'address': 'Rua Ermínio Alexandre da Silva, 50',
-      'type': 'Condomínio',
-    },
-    {
-      'name': 'Residência',
-      'address': 'Rua Cordilheiras dos Andes, 101',
-      'type': 'Residência',
-    },
-    {
-      'name': 'HM Smart',
-      'address': 'Rua 17, 50',
-      'type': 'Condomínio',
-    },
-  ];
+  int get totalPackages =>
+      stops.fold(0, (total, stop) => total + stop.packageCodes.length);
 
-  int totalPackages = 0;
+  int get condominiums =>
+      stops.where((stop) => stop.type == 'Condomínio').length;
+
+  int get residences =>
+      stops.where((stop) => stop.type == 'Residência').length;
+
+  Stop? lastStop;
 
   String normalize(String value) {
     return value
         .toLowerCase()
-        .replaceAll('ermínio alexandre da silva', '17')
-        .replaceAll('erminio alexandre da silva', '17')
         .replaceAll(RegExp(r'[^a-z0-9 ]'), '')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
   }
 
-  void simulateScan() {
-    final data = simulatedPackages[totalPackages % simulatedPackages.length];
-    final normalizedAddress = normalize(data['address']!);
+  void addScannedPackage(String code) {
+    // Por enquanto, sem OCR.
+    // Todo pacote escaneado cai em uma parada teste.
+    const address = 'Endereço lido pelo código';
+    const name = 'Pacote escaneado';
+    const type = 'Residência';
+
+    final normalizedAddress = normalize(address);
 
     Stop? existingStop;
 
@@ -96,39 +88,49 @@ class _HomePageState extends State<HomePage> {
     }
 
     setState(() {
-      totalPackages++;
-
       if (existingStop != null) {
-        existingStop!.packages++;
+        if (!existingStop!.packageCodes.contains(code)) {
+          existingStop!.packageCodes.add(code);
+        }
+        lastStop = existingStop;
       } else {
-        stops.add(
-          Stop(
-            number: stops.length + 1,
-            name: data['name']!,
-            address: data['address']!,
-            type: data['type']!,
-          ),
+        final newStop = Stop(
+          number: stops.length + 1,
+          name: name,
+          address: address,
+          type: type,
+          packageCodes: [code],
         );
+
+        stops.add(newStop);
+        lastStop = newStop;
       }
     });
+  }
+
+  Future<void> openScanner() async {
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ScannerPage(),
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      addScannedPackage(result);
+    }
   }
 
   void resetLoad() {
     setState(() {
       stops.clear();
-      totalPackages = 0;
+      lastStop = null;
     });
   }
 
-  int get condominiums =>
-      stops.where((stop) => stop.type == 'Condomínio').length;
-
-  int get residences =>
-      stops.where((stop) => stop.type == 'Residência').length;
-
   @override
   Widget build(BuildContext context) {
-    final lastStop = stops.isEmpty ? null : stops.last;
+    final currentStop = lastStop;
 
     return Scaffold(
       appBar: AppBar(
@@ -144,7 +146,6 @@ class _HomePageState extends State<HomePage> {
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 16),
-
             Row(
               children: [
                 _InfoCard(title: 'Pacotes', value: totalPackages),
@@ -152,9 +153,7 @@ class _HomePageState extends State<HomePage> {
                 _InfoCard(title: 'Paradas', value: stops.length),
               ],
             ),
-
             const SizedBox(height: 8),
-
             Row(
               children: [
                 _InfoCard(title: 'Condomínios', value: condominiums),
@@ -162,9 +161,7 @@ class _HomePageState extends State<HomePage> {
                 _InfoCard(title: 'Residências', value: residences),
               ],
             ),
-
             const SizedBox(height: 20),
-
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(22),
@@ -172,7 +169,7 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(18),
                 color: Theme.of(context).colorScheme.primaryContainer,
               ),
-              child: lastStop == null
+              child: currentStop == null
                   ? const Column(
                       children: [
                         Text(
@@ -180,7 +177,7 @@ class _HomePageState extends State<HomePage> {
                           style: TextStyle(fontSize: 22),
                         ),
                         SizedBox(height: 8),
-                        Text('Toque em simular leitura para começar'),
+                        Text('Toque em escanear pacote para começar'),
                       ],
                     )
                   : Column(
@@ -190,41 +187,37 @@ class _HomePageState extends State<HomePage> {
                           style: TextStyle(fontSize: 14),
                         ),
                         Text(
-                          '${lastStop.number}',
+                          '${currentStop.number}',
                           style: const TextStyle(
                             fontSize: 82,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
-                          lastStop.name,
+                          currentStop.name,
                           style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
-                          '${lastStop.packages} pacote(s) nesta parada',
+                          '${currentStop.packages} pacote(s) nesta parada',
                           style: const TextStyle(fontSize: 16),
                         ),
                       ],
                     ),
             ),
-
             const SizedBox(height: 20),
-
             SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton.icon(
-                onPressed: simulateScan,
-                icon: const Icon(Icons.document_scanner),
-                label: const Text('Simular leitura'),
+                onPressed: openScanner,
+                icon: const Icon(Icons.qr_code_scanner),
+                label: const Text('Escanear pacote'),
               ),
             ),
-
             const SizedBox(height: 8),
-
             SizedBox(
               width: double.infinity,
               height: 52,
@@ -234,9 +227,7 @@ class _HomePageState extends State<HomePage> {
                 label: const Text('Reiniciar carga'),
               ),
             ),
-
             const SizedBox(height: 16),
-
             Expanded(
               child: ListView.builder(
                 itemCount: stops.length,
@@ -258,6 +249,68 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class ScannerPage extends StatefulWidget {
+  const ScannerPage({super.key});
+
+  @override
+  State<ScannerPage> createState() => _ScannerPageState();
+}
+
+class _ScannerPageState extends State<ScannerPage> {
+  bool hasScanned = false;
+
+  void onDetect(BarcodeCapture capture) {
+    if (hasScanned) return;
+
+    final barcode = capture.barcodes.firstOrNull;
+    final code = barcode?.rawValue;
+
+    if (code == null || code.isEmpty) return;
+
+    hasScanned = true;
+    Navigator.pop(context, code);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('Escanear pacote'),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+      ),
+      body: Stack(
+        children: [
+          MobileScanner(
+            onDetect: onDetect,
+          ),
+          Center(
+            child: Container(
+              width: 280,
+              height: 180,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.white, width: 3),
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+          const Positioned(
+            bottom: 40,
+            left: 20,
+            right: 20,
+            child: Text(
+              'Aponte para o código de barras ou QR Code da etiqueta',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white, fontSize: 18),
+            ),
+          ),
+        ],
       ),
     );
   }
