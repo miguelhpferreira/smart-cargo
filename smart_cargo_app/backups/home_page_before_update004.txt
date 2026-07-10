@@ -3,40 +3,7 @@ import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 import 'scanner_page.dart';
 import '../widgets/info_card.dart';
-
-class DeliveryStop {
-  final int number;
-  final String name;
-  final String street;
-  final String houseNumber;
-  final String type;
-  final List<String> packageCodes;
-  final bool knownLocation;
-
-  DeliveryStop({
-    required this.number,
-    required this.name,
-    required this.street,
-    required this.houseNumber,
-    required this.type,
-    required this.packageCodes,
-    required this.knownLocation,
-  });
-
-  int get packages => packageCodes.length;
-
-  String get address {
-    final cleanStreet = street.trim();
-
-    if (cleanStreet.toLowerCase().startsWith('rua ') ||
-        cleanStreet.toLowerCase().startsWith('avenida ') ||
-        cleanStreet.toLowerCase().startsWith('av. ')) {
-      return '$cleanStreet, $houseNumber';
-    }
-
-    return 'Rua $cleanStreet, $houseNumber';
-  }
-}
+import '../models/delivery_stop.dart';
 
 class KnownLocation {
   final int? id;
