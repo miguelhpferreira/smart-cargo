@@ -1,3 +1,4 @@
+import 'screens/ ocr_test_page.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:path/path.dart' as path;
@@ -331,6 +332,22 @@ class LocationDatabase {
 // TELA PRINCIPAL
 // ============================================================
 
+SizedBox(
+  width: double.infinity,
+  height: 56,
+  child: FilledButton.icon(
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const OcrTestPage(),
+        ),
+      );
+    },
+    icon: const Icon(Icons.document_scanner),
+    label: const Text('Testar OCR da etiqueta'),
+  ),
+),
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
