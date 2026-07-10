@@ -72,9 +72,7 @@ class _OcrTestPageState extends State<OcrTestPage> {
   Future<void> _captureAndRead() async {
     final controller = _cameraController;
 
-    if (controller == null ||
-        !controller.value.isInitialized ||
-        _processing) {
+    if (controller == null || !controller.value.isInitialized || _processing) {
       return;
     }
 
@@ -121,9 +119,7 @@ class _OcrTestPageState extends State<OcrTestPage> {
     final controller = _cameraController;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Testar leitura da etiqueta'),
-      ),
+      appBar: AppBar(title: const Text('Testar leitura da etiqueta')),
       body: SafeArea(
         child: Column(
           children: [
@@ -133,60 +129,54 @@ class _OcrTestPageState extends State<OcrTestPage> {
                 width: double.infinity,
                 color: Colors.black,
                 child: _loadingCamera
-                    ? const Center(
-                        child: CircularProgressIndicator(),
+                    ? const Center(child: CircularProgressIndicator())
+                    : controller == null || !controller.value.isInitialized
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            _errorMessage ?? 'Câmera indisponível.',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
                       )
-                    : controller == null ||
-                            !controller.value.isInitialized
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Text(
-                                _errorMessage ?? 'Câmera indisponível.',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white),
+                    : Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CameraPreview(controller),
+                          Center(
+                            child: Container(
+                              width: 320,
+                              height: 430,
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 3,
+                                ),
+                                borderRadius: BorderRadius.circular(18),
                               ),
                             ),
-                          )
-                        : Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              CameraPreview(controller),
-                              Center(
-                                child: Container(
-                                  width: 320,
-                                  height: 430,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 3,
-                                    ),
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                ),
-                              ),
-                              const Positioned(
-                                left: 20,
-                                right: 20,
-                                bottom: 18,
-                                child: Text(
-                                  'Enquadre toda a etiqueta dentro da moldura',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                    shadows: [
-                                      Shadow(
-                                        blurRadius: 8,
-                                        color: Colors.black,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
                           ),
+                          const Positioned(
+                            left: 20,
+                            right: 20,
+                            bottom: 18,
+                            child: Text(
+                              'Enquadre toda a etiqueta dentro da moldura',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                shadows: [
+                                  Shadow(blurRadius: 8, color: Colors.black),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
               ),
             ),
             Expanded(
@@ -266,15 +256,12 @@ class _ResultCard extends StatelessWidget {
               data.hasValidAddress
                   ? 'Endereço reconhecido'
                   : 'Leitura incompleta',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const Divider(),
-            _ResultLine(
-              label: 'Transportadora',
-              value: data.carrier,
-            ),
+            _ResultLine(label: 'Transportadora', value: data.carrier),
             _ResultLine(
               label: 'Rua',
               value: data.street.isEmpty ? 'Não encontrada' : data.street,
@@ -291,10 +278,7 @@ class _ResultCard extends StatelessWidget {
                   ? 'Não encontrado'
                   : data.postalCode,
             ),
-            _ResultLine(
-              label: 'Confiança',
-              value: '$confidence%',
-            ),
+            _ResultLine(label: 'Confiança', value: '$confidence%'),
             const SizedBox(height: 8),
             ExpansionTile(
               tilePadding: EdgeInsets.zero,
@@ -318,10 +302,7 @@ class _ResultLine extends StatelessWidget {
   final String label;
   final String value;
 
-  const _ResultLine({
-    required this.label,
-    required this.value,
-  });
+  const _ResultLine({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {

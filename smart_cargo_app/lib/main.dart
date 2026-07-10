@@ -1,8 +1,8 @@
-import 'screens/ocr_test_page.dart';
 import 'package:flutter/material.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
+import 'screens/scanner_page.dart';
+import 'widgets/info_card.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -564,9 +564,9 @@ class _HomePageState extends State<HomePage> {
 
               Row(
                 children: [
-                  _InfoCard(title: 'Pacotes', value: totalPackages),
+                  InfoCard(title: 'Pacotes', value: totalPackages),
                   const SizedBox(width: 8),
-                  _InfoCard(title: 'Paradas', value: stops.length),
+                  InfoCard(title: 'Paradas', value: stops.length),
                 ],
               ),
 
@@ -574,23 +574,19 @@ class _HomePageState extends State<HomePage> {
 
               Row(
                 children: [
-                  _InfoCard(
+                  InfoCard(
                     title: 'Condomínios',
                     value: condominiums,
                     compact: true,
                   ),
                   const SizedBox(width: 8),
-                  _InfoCard(
+                  InfoCard(
                     title: 'Residências',
                     value: residences,
                     compact: true,
                   ),
                   const SizedBox(width: 8),
-                  _InfoCard(
-                    title: 'Comércios',
-                    value: commerces,
-                    compact: true,
-                  ),
+                  InfoCard(title: 'Comércios', value: commerces, compact: true),
                 ],
               ),
 
@@ -1010,120 +1006,3 @@ class _ManualEntryPageState extends State<ManualEntryPage> {
 // ============================================================
 // SCANNER
 // ============================================================
-
-class ScannerPage extends StatefulWidget {
-  const ScannerPage({super.key});
-
-  @override
-  State<ScannerPage> createState() => _ScannerPageState();
-}
-
-class _ScannerPageState extends State<ScannerPage> {
-  bool hasScanned = false;
-
-  void onDetect(BarcodeCapture capture) {
-    if (hasScanned || capture.barcodes.isEmpty) {
-      return;
-    }
-
-    final code = capture.barcodes.first.rawValue;
-
-    if (code == null || code.trim().isEmpty) {
-      return;
-    }
-
-    hasScanned = true;
-    Navigator.pop(context, code.trim());
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text('Escanear pacote'),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-      ),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          MobileScanner(onDetect: onDetect),
-          Center(
-            child: Container(
-              width: 300,
-              height: 190,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.white, width: 3),
-                borderRadius: BorderRadius.circular(18),
-              ),
-            ),
-          ),
-          const Positioned(
-            bottom: 48,
-            left: 24,
-            right: 24,
-            child: Text(
-              'Aponte para o código de barras ou QR Code da etiqueta',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                shadows: [Shadow(blurRadius: 8, color: Colors.black)],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================
-// COMPONENTES
-// ============================================================
-
-class _InfoCard extends StatelessWidget {
-  final String title;
-  final int value;
-  final bool compact;
-
-  const _InfoCard({
-    required this.title,
-    required this.value,
-    this.compact = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Card(
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: 6,
-            vertical: compact ? 12 : 16,
-          ),
-          child: Column(
-            children: [
-              Text(
-                title,
-                maxLines: 1,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: compact ? 12 : 15),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '$value',
-                style: TextStyle(
-                  fontSize: compact ? 25 : 30,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
