@@ -3,13 +3,26 @@ import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 import 'screens/scanner_page.dart';
 import 'widgets/info_card.dart';
-import 'app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocationDatabase.instance.database;
 
-  runApp(const SmartCargoApp(home: HomePage()));
+  runApp(const SmartCargoApp());
+}
+
+class SmartCargoApp extends StatelessWidget {
+  const SmartCargoApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Smart Cargo',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(colorSchemeSeed: Colors.deepPurple, useMaterial3: true),
+      home: const HomePage(),
+    );
+  }
 }
 
 // ============================================================
