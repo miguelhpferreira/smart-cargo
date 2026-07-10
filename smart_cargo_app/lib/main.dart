@@ -1,4 +1,4 @@
-import 'screens/ ocr_test_page.dart';
+import 'screens/ocr_test_page.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:path/path.dart' as path;
@@ -19,10 +19,7 @@ class SmartCargoApp extends StatelessWidget {
     return MaterialApp(
       title: 'Smart Cargo',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorSchemeSeed: Colors.deepPurple,
-        useMaterial3: true,
-      ),
+      theme: ThemeData(colorSchemeSeed: Colors.deepPurple, useMaterial3: true),
       home: const HomePage(),
     );
   }
@@ -231,10 +228,7 @@ class LocationDatabase {
     return _database!;
   }
 
-  Future<KnownLocation?> findLocation(
-    String street,
-    String houseNumber,
-  ) async {
+  Future<KnownLocation?> findLocation(String street, String houseNumber) async {
     final db = await database;
     final addressKey = createAddressKey(street, houseNumber);
 
@@ -264,20 +258,16 @@ class LocationDatabase {
     final now = DateTime.now().toIso8601String();
 
     if (existing == null) {
-      final id = await db.insert(
-        'known_locations',
-        {
-          'address_key': addressKey,
-          'street': street.trim(),
-          'house_number': houseNumber.trim(),
-          'type': type,
-          'name': name.trim(),
-          'uses': 1,
-          'created_at': now,
-          'updated_at': now,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      final id = await db.insert('known_locations', {
+        'address_key': addressKey,
+        'street': street.trim(),
+        'house_number': houseNumber.trim(),
+        'type': type,
+        'name': name.trim(),
+        'uses': 1,
+        'created_at': now,
+        'updated_at': now,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
 
       return KnownLocation(
         id: id,
@@ -332,22 +322,6 @@ class LocationDatabase {
 // TELA PRINCIPAL
 // ============================================================
 
-SizedBox(
-  width: double.infinity,
-  height: 56,
-  child: FilledButton.icon(
-    onPressed: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const OcrTestPage(),
-        ),
-      );
-    },
-    icon: const Icon(Icons.document_scanner),
-    label: const Text('Testar OCR da etiqueta'),
-  ),
-),
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -369,10 +343,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   int get totalPackages {
-    return stops.fold(
-      0,
-      (total, stop) => total + stop.packageCodes.length,
-    );
+    return stops.fold(0, (total, stop) => total + stop.packageCodes.length);
   }
 
   int get condominiums {
@@ -418,8 +389,7 @@ class _HomePageState extends State<HomePage> {
       );
 
       final effectiveStreet = knownLocation?.street ?? street.trim();
-      final effectiveNumber =
-          knownLocation?.houseNumber ?? houseNumber.trim();
+      final effectiveNumber = knownLocation?.houseNumber ?? houseNumber.trim();
       final effectiveType = knownLocation?.type ?? type;
 
       final suppliedName = name.trim();
@@ -428,21 +398,15 @@ class _HomePageState extends State<HomePage> {
       final effectiveName = suppliedName.isNotEmpty
           ? suppliedName
           : savedName.isNotEmpty
-              ? savedName
-              : effectiveType;
+          ? savedName
+          : effectiveType;
 
-      final newKey = createAddressKey(
-        effectiveStreet,
-        effectiveNumber,
-      );
+      final newKey = createAddressKey(effectiveStreet, effectiveNumber);
 
       DeliveryStop? existingStop;
 
       for (final stop in stops) {
-        final existingKey = createAddressKey(
-          stop.street,
-          stop.houseNumber,
-        );
+        final existingKey = createAddressKey(stop.street, stop.houseNumber);
 
         if (existingKey == newKey) {
           existingStop = stop;
@@ -497,9 +461,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> openScanner() async {
     final scannedCode = await Navigator.push<String>(
       context,
-      MaterialPageRoute(
-        builder: (_) => const ScannerPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const ScannerPage()),
     );
 
     if (!mounted || scannedCode == null || scannedCode.isEmpty) {
@@ -511,9 +473,7 @@ class _HomePageState extends State<HomePage> {
     final manualResult = await Navigator.push<ManualEntryResult>(
       context,
       MaterialPageRoute(
-        builder: (_) => const ManualEntryPage(
-          title: 'Endereço do pacote',
-        ),
+        builder: (_) => const ManualEntryPage(title: 'Endereço do pacote'),
       ),
     );
 
@@ -534,9 +494,7 @@ class _HomePageState extends State<HomePage> {
     final result = await Navigator.push<ManualEntryResult>(
       context,
       MaterialPageRoute(
-        builder: (_) => const ManualEntryPage(
-          title: 'Inserir manualmente',
-        ),
+        builder: (_) => const ManualEntryPage(title: 'Inserir manualmente'),
       ),
     );
 
@@ -544,8 +502,7 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    final packageCode =
-        'manual-${DateTime.now().millisecondsSinceEpoch}';
+    final packageCode = 'manual-${DateTime.now().millisecondsSinceEpoch}';
 
     await addPackage(
       code: packageCode,
@@ -593,10 +550,7 @@ class _HomePageState extends State<HomePage> {
     final currentStop = lastStop;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Smart Cargo'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Smart Cargo'), centerTitle: true),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -610,15 +564,9 @@ class _HomePageState extends State<HomePage> {
 
               Row(
                 children: [
-                  _InfoCard(
-                    title: 'Pacotes',
-                    value: totalPackages,
-                  ),
+                  _InfoCard(title: 'Pacotes', value: totalPackages),
                   const SizedBox(width: 8),
-                  _InfoCard(
-                    title: 'Paradas',
-                    value: stops.length,
-                  ),
+                  _InfoCard(title: 'Paradas', value: stops.length),
                 ],
               ),
 
@@ -651,10 +599,7 @@ class _HomePageState extends State<HomePage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.memory,
-                    size: 18,
-                  ),
+                  const Icon(Icons.memory, size: 18),
                   const SizedBox(width: 6),
                   Text(
                     '$knownLocationsCount locais na memória',
@@ -670,33 +615,25 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(22),
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primaryContainer,
+                  color: Theme.of(context).colorScheme.primaryContainer,
                 ),
                 child: currentStop == null
                     ? const Column(
                         children: [
-                          Icon(
-                            Icons.inventory_2_outlined,
-                            size: 48,
-                          ),
+                          Icon(Icons.inventory_2_outlined, size: 48),
                           SizedBox(height: 12),
                           Text(
                             'Nenhum pacote lido',
                             style: TextStyle(fontSize: 22),
                           ),
                           SizedBox(height: 8),
-                          Text(
-                            'Escaneie ou insira manualmente',
-                          ),
+                          Text('Escaneie ou insira manualmente'),
                         ],
                       )
                     : Column(
                         children: [
                           Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
                                 currentStop.knownLocation
@@ -781,9 +718,7 @@ class _HomePageState extends State<HomePage> {
                 width: double.infinity,
                 height: 52,
                 child: OutlinedButton.icon(
-                  onPressed: stops.isEmpty || processing
-                      ? null
-                      : resetLoad,
+                  onPressed: stops.isEmpty || processing ? null : resetLoad,
                   icon: const Icon(Icons.restart_alt),
                   label: const Text('Reiniciar carga'),
                 ),
@@ -800,12 +735,9 @@ class _HomePageState extends State<HomePage> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Paradas da carga',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -819,19 +751,14 @@ class _HomePageState extends State<HomePage> {
 
                     return Card(
                       child: ListTile(
-                        leading: CircleAvatar(
-                          child: Text('${stop.number}'),
-                        ),
+                        leading: CircleAvatar(child: Text('${stop.number}')),
                         title: Text(
                           stop.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(stop.address),
                         trailing: Column(
-                          mainAxisAlignment:
-                              MainAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                               '${stop.packages}',
@@ -863,10 +790,7 @@ class _HomePageState extends State<HomePage> {
 class ManualEntryPage extends StatefulWidget {
   final String title;
 
-  const ManualEntryPage({
-    super.key,
-    required this.title,
-  });
+  const ManualEntryPage({super.key, required this.title});
 
   @override
   State<ManualEntryPage> createState() => _ManualEntryPageState();
@@ -926,11 +850,9 @@ class _ManualEntryPageState extends State<ManualEntryPage> {
     final number = numberController.text.trim();
 
     if (street.isEmpty || number.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Informe a rua e o número'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Informe a rua e o número')));
       return;
     }
 
@@ -947,17 +869,10 @@ class _ManualEntryPageState extends State<ManualEntryPage> {
 
   @override
   Widget build(BuildContext context) {
-    const types = [
-      'Residência',
-      'Condomínio',
-      'Comércio',
-      'Outro',
-    ];
+    const types = ['Residência', 'Condomínio', 'Comércio', 'Outro'];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
+      appBar: AppBar(title: Text(widget.title)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -994,15 +909,12 @@ class _ManualEntryPageState extends State<ManualEntryPage> {
               const SizedBox(height: 12),
 
               OutlinedButton.icon(
-                onPressed:
-                    checkingAddress ? null : checkKnownAddress,
+                onPressed: checkingAddress ? null : checkKnownAddress,
                 icon: checkingAddress
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                        ),
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.search),
                 label: const Text('Verificar na memória'),
@@ -1011,9 +923,7 @@ class _ManualEntryPageState extends State<ManualEntryPage> {
               if (existingLocation != null) ...[
                 const SizedBox(height: 12),
                 Card(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .secondaryContainer,
+                  color: Theme.of(context).colorScheme.secondaryContainer,
                   child: const ListTile(
                     leading: Icon(Icons.check_circle),
                     title: Text('Local conhecido'),
@@ -1138,18 +1048,13 @@ class _ScannerPageState extends State<ScannerPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          MobileScanner(
-            onDetect: onDetect,
-          ),
+          MobileScanner(onDetect: onDetect),
           Center(
             child: Container(
               width: 300,
               height: 190,
               decoration: BoxDecoration(
-                border: Border.all(
-                  color: Colors.white,
-                  width: 3,
-                ),
+                border: Border.all(color: Colors.white, width: 3),
                 borderRadius: BorderRadius.circular(18),
               ),
             ),
@@ -1164,12 +1069,7 @@ class _ScannerPageState extends State<ScannerPage> {
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
-                shadows: [
-                  Shadow(
-                    blurRadius: 8,
-                    color: Colors.black,
-                  ),
-                ],
+                shadows: [Shadow(blurRadius: 8, color: Colors.black)],
               ),
             ),
           ),
@@ -1210,9 +1110,7 @@ class _InfoCard extends StatelessWidget {
                 maxLines: 1,
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: compact ? 12 : 15,
-                ),
+                style: TextStyle(fontSize: compact ? 12 : 15),
               ),
               const SizedBox(height: 6),
               Text(
