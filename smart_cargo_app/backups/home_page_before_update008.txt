@@ -278,6 +278,7 @@ class _HomePageState extends State<HomePage> {
 
   DeliveryStop? lastStop;
   int knownLocationsCount = 0;
+  bool processing = false;
 
   @override
   void initState() {
@@ -319,10 +320,10 @@ class _HomePageState extends State<HomePage> {
     required String name,
     bool saveInMemory = true,
   }) async {
-    if (controller.processing) return;
+    if (processing) return;
 
     setState(() {
-      controller.setProcessing(true);
+      processing = true;
     });
 
     try {
@@ -395,7 +396,7 @@ class _HomePageState extends State<HomePage> {
     } finally {
       if (mounted) {
         setState(() {
-          controller.setProcessing(false);
+          processing = false;
         });
       }
     }
@@ -633,7 +634,7 @@ class _HomePageState extends State<HomePage> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton.icon(
-                  onPressed: controller.processing ? null : openScanner,
+                  onPressed: processing ? null : openScanner,
                   icon: const Icon(Icons.qr_code_scanner),
                   label: const Text('Escanear pacote'),
                 ),
@@ -645,7 +646,7 @@ class _HomePageState extends State<HomePage> {
                 width: double.infinity,
                 height: 56,
                 child: OutlinedButton.icon(
-                  onPressed: controller.processing ? null : openManualEntry,
+                  onPressed: processing ? null : openManualEntry,
                   icon: const Icon(Icons.edit_location_alt),
                   label: const Text('Inserir manualmente'),
                 ),
@@ -657,15 +658,13 @@ class _HomePageState extends State<HomePage> {
                 width: double.infinity,
                 height: 52,
                 child: OutlinedButton.icon(
-                  onPressed: stops.isEmpty || controller.processing
-                      ? null
-                      : resetLoad,
+                  onPressed: stops.isEmpty || processing ? null : resetLoad,
                   icon: const Icon(Icons.restart_alt),
                   label: const Text('Reiniciar carga'),
                 ),
               ),
 
-              if (controller.processing) ...[
+              if (processing) ...[
                 const SizedBox(height: 16),
                 const CircularProgressIndicator(),
               ],
