@@ -4,7 +4,6 @@ import 'package:sqflite/sqflite.dart';
 import 'scanner_page.dart';
 import '../widgets/info_card.dart';
 import '../models/delivery_stop.dart';
-import '../controllers/home_controller.dart';
 
 class KnownLocation {
   final int? id;
@@ -273,7 +272,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final HomeController controller = HomeController();
   final List<DeliveryStop> stops = [];
 
   DeliveryStop? lastStop;
