@@ -217,7 +217,30 @@ class _OcrCapturePageState extends State<OcrCapturePage> {
                           child: Text(_errorMessage!),
                         ),
                       ),
-                    if (result != null) _OcrResultCard(data: result),
+                    if (result != null) ...[
+                      _OcrResultCard(data: result),
+                      const SizedBox(height: 12),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Text(
+                                'Texto bruto reconhecido pelo OCR',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              SelectableText(
+                                result.rawText.isEmpty
+                                    ? 'Nenhum texto reconhecido.'
+                                    : result.rawText,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     SizedBox(
                       height: 56,
