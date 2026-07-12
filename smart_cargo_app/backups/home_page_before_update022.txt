@@ -391,11 +391,7 @@ class _HomePageState extends State<HomePage> {
     final manualResult = await Navigator.push<ManualEntryResult>(
       context,
       MaterialPageRoute(
-        builder: (_) => ManualEntryPage(
-          title: 'Endereço do pacote',
-          initialStreet: ocrResult?.street ?? '',
-          initialHouseNumber: ocrResult?.houseNumber ?? '',
-        ),
+        builder: (_) => const ManualEntryPage(title: 'Endereço do pacote'),
       ),
     );
 
@@ -720,39 +716,21 @@ class _HomePageState extends State<HomePage> {
 
 class ManualEntryPage extends StatefulWidget {
   final String title;
-  final String initialStreet;
-  final String initialHouseNumber;
 
-  const ManualEntryPage({
-    super.key,
-    required this.title,
-    this.initialStreet = '',
-    this.initialHouseNumber = '',
-  });
+  const ManualEntryPage({super.key, required this.title});
 
   @override
   State<ManualEntryPage> createState() => _ManualEntryPageState();
 }
 
 class _ManualEntryPageState extends State<ManualEntryPage> {
-  late final TextEditingController streetController;
-  late final TextEditingController numberController;
+  final streetController = TextEditingController();
+  final numberController = TextEditingController();
   final nameController = TextEditingController();
 
   String selectedType = 'Residência';
   bool checkingAddress = false;
   KnownLocation? existingLocation;
-
-  @override
-  void initState() {
-    super.initState();
-
-    streetController = TextEditingController(text: widget.initialStreet.trim());
-
-    numberController = TextEditingController(
-      text: widget.initialHouseNumber.trim(),
-    );
-  }
 
   @override
   void dispose() {
