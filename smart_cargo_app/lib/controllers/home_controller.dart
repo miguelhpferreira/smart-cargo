@@ -12,4 +12,20 @@ class HomeController extends ChangeNotifier {
     _processing = value;
     notifyListeners();
   }
+
+  int get totalPackages {
+    return stops.fold(0, (total, stop) => total + stop.packageCodes.length);
+  }
+
+  int get condominiums {
+    return stops.where((stop) => stop.type == 'Condomínio').length;
+  }
+
+  int get residences {
+    return stops.where((stop) => stop.type == 'Residência').length;
+  }
+
+  int get commerces {
+    return stops.where((stop) => stop.type == 'Comércio').length;
+  }
 }

@@ -284,6 +284,25 @@ class _HomePageState extends State<HomePage> {
     loadKnownLocationsCount();
   }
 
+  int get totalPackages {
+    return controller.stops.fold(
+      0,
+      (total, stop) => total + stop.packageCodes.length,
+    );
+  }
+
+  int get condominiums {
+    return controller.stops.where((stop) => stop.type == 'Condomínio').length;
+  }
+
+  int get residences {
+    return controller.stops.where((stop) => stop.type == 'Residência').length;
+  }
+
+  int get commerces {
+    return controller.stops.where((stop) => stop.type == 'Comércio').length;
+  }
+
   Future<void> loadKnownLocationsCount() async {
     final total = await LocationDatabase.instance.countKnownLocations();
 
@@ -490,7 +509,7 @@ class _HomePageState extends State<HomePage> {
 
               Row(
                 children: [
-                  InfoCard(title: 'Pacotes', value: controller.totalPackages),
+                  InfoCard(title: 'Pacotes', value: totalPackages),
                   const SizedBox(width: 8),
                   InfoCard(title: 'Paradas', value: controller.stops.length),
                 ],
@@ -502,21 +521,17 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   InfoCard(
                     title: 'Condomínios',
-                    value: controller.condominiums,
+                    value: condominiums,
                     compact: true,
                   ),
                   const SizedBox(width: 8),
                   InfoCard(
                     title: 'Residências',
-                    value: controller.residences,
+                    value: residences,
                     compact: true,
                   ),
                   const SizedBox(width: 8),
-                  InfoCard(
-                    title: 'Comércios',
-                    value: controller.commerces,
-                    compact: true,
-                  ),
+                  InfoCard(title: 'Comércios', value: commerces, compact: true),
                 ],
               ),
 
