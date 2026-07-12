@@ -142,7 +142,7 @@ class _OcrCapturePageState extends State<OcrCapturePage> {
     final result = _result;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ler endereço da etiqueta')),
+      appBar: AppBar(title: const Text('OCR TESTE 027')),
       body: SafeArea(
         child: Column(
           children: [
