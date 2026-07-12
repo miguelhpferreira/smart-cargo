@@ -321,18 +321,42 @@ class _HomePageState extends State<HomePage> {
           ? savedName
           : effectiveType;
 
+      final newKey = createAddressKey(effectiveStreet, effectiveNumber);
+
+      DeliveryStop? existingStop;
+
+      for (final stop in controller.stops) {
+        final existingKey = createAddressKey(stop.street, stop.houseNumber);
+
+        if (existingKey == newKey) {
+          existingStop = stop;
+          break;
+        }
+      }
+
       if (!mounted) return;
 
       setState(() {
-        controller.upsertStop(
-          code: code,
-          street: effectiveStreet,
-          houseNumber: effectiveNumber,
-          type: effectiveType,
-          name: effectiveName,
-          knownLocation: knownLocation != null,
-          createAddressKey: createAddressKey,
-        );
+        if (existingStop != null) {
+          if (!existingStop!.packageCodes.contains(code)) {
+            existingStop!.packageCodes.add(code);
+          }
+
+          controller.lastStop = existingStop;
+        } else {
+          final newStop = DeliveryStop(
+            number: controller.stops.length + 1,
+            name: effectiveName,
+            street: effectiveStreet,
+            houseNumber: effectiveNumber,
+            type: effectiveType,
+            packageCodes: [code],
+            knownLocation: knownLocation != null,
+          );
+
+          controller.stops.add(newStop);
+          controller.lastStop = newStop;
+        }
       });
 
       if (saveInMemory) {
