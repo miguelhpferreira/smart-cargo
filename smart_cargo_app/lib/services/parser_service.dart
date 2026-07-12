@@ -5,7 +5,6 @@ class ParserService {
 
   PackageData parse(String rawText) {
     final cleanedText = _cleanText(rawText);
-
     final lines = cleanedText
         .split('\n')
         .map((line) => line.trim())
@@ -40,12 +39,175 @@ class ParserService {
         .replaceAll('\r\n', '\n')
         .replaceAll('\r', '\n')
         .replaceAll(RegExp(r'[ \t]+'), ' ')
-        .replaceAll(RegExp(r'\n{2,}'), '\n')
+        .replaceAllMapped(
+          RegExp(r'\b(?:Aua|Rva|Ruo|Roa)\b', caseSensitive: false),
+          (_) => 'Rua',
+        )
+        .replaceAllMapped(
+          RegExp(r'\b(?:Avenida|Avenlda|Avenda|Av\.?)\b', caseSensitive: false),
+          (_) => 'Avenida',
+        )
         .trim();
   }
 
+  String _findPostalCode(String text) {
+    final directMatch = RegExp(
+      r'\b(\d{5})[-.\s]?(\d{3})\b',
+      caseSensitive: false,
+    ).firstMatch(text);
+
+    if (directMatch != null) {
+      return '${directMatch.group(1)}-${directMatch.group(2)}';
+    }
+
+    // Aceita erros do OCR, como D no lugar de 0:
+    // 13184-D81 -> 13184-081
+    final ocrMatch = RegExp(
+      r'\b(?:CEP\s*[:.]?\s*)?([0-9OQDISBLZG]{5})[-.\s]?([0-9OQDISBLZG]{3})\b',
+      caseSensitive: false,
+    ).firstMatch(text);
+
+    if (ocrMatch == null) {
+      return '';
+    }
+
+    final firstPart = _correctOcrDigits(ocrMatch.group(1) ?? '');
+    final secondPart = _correctOcrDigits(ocrMatch.group(2) ?? '');
+
+    if (firstPart.length != 5 ||
+        secondPart.length != 3 ||
+        !RegExp(r'^\d+$').hasMatch(firstPart) ||
+        !RegExp(r'^\d+$').hasMatch(secondPart)) {
+      return '';
+    }
+
+    return '$firstPart-$secondPart';
+  }
+
+  String _correctOcrDigits(String value) {
+    return value
+        .toUpperCase()
+        .replaceAll('O', '0')
+        .replaceAll('Q', '0')
+        .replaceAll('D', '0')
+        .replaceAll('I', '1')
+        .replaceAll('L', '1')
+        .replaceAll('Z', '2')
+        .replaceAll('S', '5')
+        .replaceAll('G', '6')
+        .replaceAll('B', '8');
+  }
+
+  String _detectCarrier(String text) {
+    final normalized = text.toLowerCase();
+
+    if (normalized.contains('imile') || normalized.contains('i mile')) {
+      return 'iMile';
+    }
+
+    if (normalized.contains('shein')) {
+      return 'Shein';
+    }
+
+    if (normalized.contains('shopee')) {
+      return 'Shopee';
+    }
+
+    if (normalized.contains('mercado livre') ||
+        normalized.contains('mercadolivre')) {
+      return 'Mercado Livre';
+    }
+
+    if (normalized.contains('amazon')) {
+      return 'Amazon';
+    }
+
+    if (normalized.contains('tiktok') || normalized.contains('tik tok')) {
+      return 'TikTok Shop';
+    }
+
+    if (normalized.contains('kwai')) {
+      return 'Kwai';
+    }
+
+    if (normalized.contains('olist')) {
+      return 'Olist';
+    }
+
+    if (normalized.contains('correios')) {
+      return 'Correios';
+    }
+
+    if (normalized.contains('jadlog')) {
+      return 'Jadlog';
+    }
+
+    return 'Não identificada';
+  }
+
   _AddressResult? _findAddress(List<String> lines) {
-    // Primeiro tenta localizar o endereço em cada linha individual.
+    if (lines.isEmpty) {
+      return null;
+    }
+
+    final destinationLines = _destinationSection(lines);
+
+    // Primeiro procura dentro do bloco do destinatário.
+    final destinationResult = _findAddressInLines(destinationLines);
+
+    if (destinationResult != null) {
+      return destinationResult;
+    }
+
+    // Se o bloco não estiver bem definido, procura no texto todo,
+    // mas para antes do remetente.
+    final safeLines = <String>[];
+
+    for (final line in lines) {
+      if (_isSenderMarker(line)) {
+        break;
+      }
+
+      safeLines.add(line);
+    }
+
+    return _findAddressInLines(safeLines);
+  }
+
+  List<String> _destinationSection(List<String> lines) {
+    final result = <String>[];
+    var insideDestination = false;
+
+    for (final line in lines) {
+      final normalized = _normalizeForComparison(line);
+
+      if (normalized.contains('destinatario') ||
+          normalized.contains('destino')) {
+        insideDestination = true;
+        continue;
+      }
+
+      if (insideDestination && _isSenderMarker(line)) {
+        break;
+      }
+
+      if (insideDestination) {
+        result.add(line);
+      }
+    }
+
+    return result;
+  }
+
+  bool _isSenderMarker(String line) {
+    final normalized = _normalizeForComparison(line);
+
+    return normalized.contains('remetente') ||
+        normalized == 'sender' ||
+        normalized.contains('dados do remetente');
+  }
+
+  _AddressResult? _findAddressInLines(List<String> lines) {
     for (final line in lines) {
       final result = _extractAddressFromLine(line);
 
@@ -54,178 +216,138 @@ class ParserService {
       }
     }
 
-    // Depois combina até três linhas consecutivas.
-    for (var index = 0; index < lines.length; index++) {
-      final buffer = <String>[lines[index]];
+    // O OCR pode separar a rua e o número em linhas diferentes.
+    for (var index = 0; index < lines.length - 1; index++) {
+      final currentLine = lines[index];
+      final nextLine = lines[index + 1];
 
-      if (index + 1 < lines.length) {
-        buffer.add(lines[index + 1]);
+      final streetOnly = _extractStreetOnly(currentLine);
+
+      if (streetOnly == null) {
+        continue;
       }
 
-      if (index + 2 < lines.length) {
-        buffer.add(lines[index + 2]);
+      final number = _extractNumberAtStart(nextLine);
+
+      if (number.isEmpty) {
+        continue;
       }
 
-      final result = _extractAddressFromLine(buffer.join(' '));
-
-      if (result != null) {
-        return result;
-      }
+      return _AddressResult(street: streetOnly, houseNumber: number);
     }
 
     return null;
   }
 
-  _AddressResult? _extractAddressFromLine(String originalLine) {
-    var line = originalLine
-        .replaceAll(RegExp(r'\bN[º°oO0]\.?\s*', caseSensitive: false), '')
+  _AddressResult? _extractAddressFromLine(String line) {
+    var normalizedLine = line
         .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'\bN[º°o]\s*', caseSensitive: false), '')
         .trim();
 
-    // Evita interpretar endereço do remetente.
-    final lower = line.toLowerCase();
+    normalizedLine = normalizedLine.replaceFirst(
+      RegExp(r'^(?:Aua|Rva|Ruo|Roa)\b', caseSensitive: false),
+      'Rua',
+    );
 
-    if (lower.contains('dock ') ||
-        lower.contains('remetente') ||
-        lower.contains('guarulhos') && !lower.contains('destinat')) {
+    final pattern = RegExp(
+      r'\b('
+      r'(?:Rua|R\.?|Avenida|Av\.?|Travessa|Tv\.?|Alameda|Estrada|Rodovia)'
+      r'\s+'
+      r'[A-Za-zÀ-ÿ0-9 .'
+      '-]{2,}?)'
+      r'\s*[,;:-]\s*'
+      r'(\d{1,6}[A-Za-z]?)'
+      r'\b',
+      caseSensitive: false,
+    );
+
+    final match = pattern.firstMatch(normalizedLine);
+
+    if (match != null) {
+      final street = _normalizeStreetDisplay(match.group(1) ?? '');
+      final number = match.group(2)?.trim() ?? '';
+
+      if (_validStreet(street) && number.isNotEmpty) {
+        return _AddressResult(street: street, houseNumber: number);
+      }
+    }
+
+    // Aceita endereço sem vírgula:
+    // Rua Wilson Vasco Mazon 402
+    final loosePattern = RegExp(
+      r'\b('
+      r'(?:Rua|R\.?|Avenida|Av\.?|Travessa|Tv\.?|Alameda|Estrada|Rodovia)'
+      r'\s+'
+      r'[A-Za-zÀ-ÿ0-9 .'
+      '-]{3,}?)'
+      r'\s+'
+      r'(\d{1,6}[A-Za-z]?)'
+      r'\b',
+      caseSensitive: false,
+    );
+
+    final looseMatch = loosePattern.firstMatch(normalizedLine);
+
+    if (looseMatch == null) {
       return null;
     }
 
-    final prefixMatch = RegExp(
-      r'\b(Rua|R\.?|Avenida|Av\.?|Travessa|Tv\.?|Alameda|Estrada|Rodovia)\s+',
+    final street = _normalizeStreetDisplay(looseMatch.group(1) ?? '');
+    final number = looseMatch.group(2)?.trim() ?? '';
+
+    if (!_validStreet(street) || number.isEmpty) {
+      return null;
+    }
+
+    return _AddressResult(street: street, houseNumber: number);
+  }
+
+  String? _extractStreetOnly(String line) {
+    var value = line.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    value = value.replaceFirst(
+      RegExp(r'^(?:Aua|Rva|Ruo|Roa)\b', caseSensitive: false),
+      'Rua',
+    );
+
+    final match = RegExp(
+      r'^('
+      r'(?:Rua|R\.?|Avenida|Av\.?|Travessa|Tv\.?|Alameda|Estrada|Rodovia)'
+      r'\s+'
+      r"[A-Za-zÀ-ÿ0-9 .'-]{3,}"
+      r')$',
+      caseSensitive: false,
+    ).firstMatch(value);
+
+    if (match == null) {
+      return null;
+    }
+
+    final street = _normalizeStreetDisplay(match.group(1) ?? '');
+
+    return _validStreet(street) ? street : null;
+  }
+
+  String _extractNumberAtStart(String line) {
+    final match = RegExp(
+      r'^\s*(?:N[º°o]\s*)?(\d{1,6}[A-Za-z]?)\b',
       caseSensitive: false,
     ).firstMatch(line);
 
-    if (prefixMatch == null) {
-      return null;
-    }
-
-    line = line.substring(prefixMatch.start).trim();
-
-    final streetPrefix = prefixMatch.group(1) ?? 'Rua';
-
-    // Rua 17, 50
-    // Rua Wilson Vasco Mazon, 402, Remanso
-    // Rua Rodrigo Carvalho, 200, Parque Ortolândia
-    final commaPattern = RegExp(
-      r'^(Rua|R\.?|Avenida|Av\.?|Travessa|Tv\.?|Alameda|Estrada|Rodovia)\s+'
-      r'(.+?)[,;]\s*(\d{1,6}[A-Za-z]?)\b',
-      caseSensitive: false,
-    );
-
-    final commaMatch = commaPattern.firstMatch(line);
-
-    if (commaMatch != null) {
-      final streetBody = commaMatch.group(2)?.trim() ?? '';
-      final number = commaMatch.group(3)?.trim() ?? '';
-
-      if (_validStreet(streetBody) && _validNumber(number)) {
-        return _AddressResult(
-          street: _normalizeStreet('$streetPrefix $streetBody'),
-          houseNumber: number,
-        );
-      }
-    }
-
-    // Formato sem vírgula:
-    // R. Capitao Joao Goncalves 116
-    final simplePattern = RegExp(
-      r'^(Rua|R\.?|Avenida|Av\.?|Travessa|Tv\.?|Alameda|Estrada|Rodovia)\s+'
-      r'(.+?)\s+(\d{1,6}[A-Za-z]?)\b',
-      caseSensitive: false,
-    );
-
-    final simpleMatches = simplePattern.allMatches(line).toList();
-
-    if (simpleMatches.isNotEmpty) {
-      // Usa a última correspondência válida para não confundir "Rua 17".
-      for (final match in simpleMatches.reversed) {
-        final streetBody = match.group(2)?.trim() ?? '';
-        final number = match.group(3)?.trim() ?? '';
-
-        if (_validStreet(streetBody) && _validNumber(number)) {
-          return _AddressResult(
-            street: _normalizeStreet('$streetPrefix $streetBody'),
-            houseNumber: number,
-          );
-        }
-      }
-    }
-
-    // Caso com informações extras:
-    // Rua 17, Cond Hm Smart 2, AP 13, BL D, 50, 530...
-    final numbers = RegExp(r'(?<!\d)(\d{1,6}[A-Za-z]?)(?!\d)')
-        .allMatches(line)
-        .map((match) => match.group(1) ?? '')
-        .where(_validNumber)
-        .toList();
-
-    if (numbers.length >= 2) {
-      final firstComma = line.indexOf(',');
-
-      if (firstComma > 0) {
-        final street = line.substring(0, firstComma).trim();
-
-        // Prefere números depois de marcadores AP/BL/condomínio.
-        // O penúltimo costuma ser o número da residência.
-        final number = numbers.length >= 3
-            ? numbers[numbers.length - 2]
-            : numbers.last;
-
-        if (_validStreet(street) && _validNumber(number)) {
-          return _AddressResult(
-            street: _normalizeStreet(street),
-            houseNumber: number,
-          );
-        }
-      }
-    }
-
-    return null;
+    return match?.group(1)?.trim() ?? '';
   }
 
-  bool _validStreet(String street) {
-    final value = street.trim();
-
-    if (value.length < 2) {
-      return false;
-    }
-
-    return RegExp(r'[A-Za-zÀ-ÿ]').hasMatch(value) ||
-        RegExp(r'^\d{1,4}$').hasMatch(value);
-  }
-
-  bool _validNumber(String number) {
-    final value = number.trim();
-
-    if (!RegExp(r'^\d{1,6}[A-Za-z]?$').hasMatch(value)) {
-      return false;
-    }
-
-    final numericPart = int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), ''));
-
-    if (numericPart == null || numericPart <= 0) {
-      return false;
-    }
-
-    // Evita anos e CEPs sendo usados como número da casa.
-    if (numericPart >= 1900 && numericPart <= 2100) {
-      return false;
-    }
-
-    return true;
-  }
-
-  String _normalizeStreet(String street) {
+  String _normalizeStreetDisplay(String street) {
     var value = street.replaceAll(RegExp(r'\s+'), ' ').trim();
 
     value = value.replaceFirst(
-      RegExp(r'^R\.?\s+', caseSensitive: false),
+      RegExp(r'^(?:R\.?|Aua|Rva|Ruo|Roa)\s+', caseSensitive: false),
       'Rua ',
     );
 
     value = value.replaceFirst(
-      RegExp(r'^Av\.?\s+', caseSensitive: false),
+      RegExp(r'^(?:Av\.?|Avenlda|Avenda)\s+', caseSensitive: false),
       'Avenida ',
     );
 
@@ -234,56 +356,63 @@ class ParserService {
       'Travessa ',
     );
 
-    return value;
+    return value.trim();
   }
 
-  String _findPostalCode(String text) {
-    final match = RegExp(
-      r'\b(\d{5})[\s.\-]?(\d{3})\b',
-      caseSensitive: false,
-    ).firstMatch(text);
+  bool _validStreet(String street) {
+    final normalized = _normalizeForComparison(street);
 
-    if (match == null) {
-      return '';
+    if (normalized.length < 5) {
+      return false;
     }
 
-    return '${match.group(1)}-${match.group(2)}';
+    const forbiddenWords = [
+      'remetente',
+      'destinatario',
+      'pedido',
+      'cep',
+      'transportadora',
+      'data de envio',
+      'peso bruto',
+      'referencia',
+      'volume',
+    ];
+
+    return !forbiddenWords.any(normalized.contains);
   }
 
-  String _detectCarrier(String text) {
-    final normalized = text.toLowerCase();
+  String _normalizeForComparison(String value) {
+    var normalized = value.toLowerCase();
 
-    if (normalized.contains('shein')) {
-      return 'Shein';
-    }
+    const replacements = {
+      'á': 'a',
+      'à': 'a',
+      'ã': 'a',
+      'â': 'a',
+      'é': 'e',
+      'è': 'e',
+      'ê': 'e',
+      'í': 'i',
+      'ì': 'i',
+      'î': 'i',
+      'ó': 'o',
+      'ò': 'o',
+      'õ': 'o',
+      'ô': 'o',
+      'ú': 'u',
+      'ù': 'u',
+      'û': 'u',
+      'ç': 'c',
+    };
 
-    if (normalized.contains('imile') ||
-        normalized.contains('i mile') ||
-        normalized.contains('imile')) {
-      return 'iMile';
-    }
+    replacements.forEach((original, replacement) {
+      normalized = normalized.replaceAll(original, replacement);
+    });
 
-    if (normalized.contains('fm transportes')) {
-      return 'FM Transportes';
-    }
-
-    if (normalized.contains('tiktok') || normalized.contains('tik tok')) {
-      return 'TikTok Shop';
-    }
-
-    if (normalized.contains('olist')) {
-      return 'Olist';
-    }
-
-    if (normalized.contains('kwai')) {
-      return 'Kwai';
-    }
-
-    if (normalized.contains('shopee')) {
-      return 'Shopee';
-    }
-
-    return 'Não identificada';
+    return normalized
+        .replaceAll(RegExp(r'[^a-z0-9 ]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
   }
 
   double _calculateConfidence({
