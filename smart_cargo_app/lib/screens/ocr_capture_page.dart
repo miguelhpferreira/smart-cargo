@@ -30,40 +30,81 @@ class _OcrCapturePageState extends State<OcrCapturePage> {
   }
 
   Future<void> _initializeCamera() async {
+    CameraController? successfulController;
+
     try {
       final cameras = await availableCameras();
 
       if (cameras.isEmpty) {
-        throw StateError('Nenhuma câmera encontrada.');
+        throw StateError('Nenhuma câmera encontrada no aparelho.');
       }
 
-      final backCamera = cameras.firstWhere(
-        (camera) => camera.lensDirection == CameraLensDirection.back,
-        orElse: () => cameras.first,
-      );
+      final orderedCameras = <CameraDescription>[
+        ...cameras.where(
+          (camera) => camera.lensDirection == CameraLensDirection.back,
+        ),
+        ...cameras.where(
+          (camera) => camera.lensDirection != CameraLensDirection.back,
+        ),
+      ];
 
-      final controller = CameraController(
-        backCamera,
-        ResolutionPreset.high,
-        enableAudio: false,
-      );
+      Object? lastError;
 
-      await controller.initialize();
+      for (final camera in orderedCameras) {
+        for (final resolution in <ResolutionPreset>[
+          ResolutionPreset.medium,
+          ResolutionPreset.low,
+        ]) {
+          CameraController? testController;
+
+          try {
+            testController = CameraController(
+              camera,
+              resolution,
+              enableAudio: false,
+              imageFormatGroup: ImageFormatGroup.jpeg,
+            );
+
+            await testController.initialize();
+
+            successfulController = testController;
+            break;
+          } catch (error) {
+            lastError = error;
+            await testController?.dispose();
+          }
+        }
+
+        if (successfulController != null) {
+          break;
+        }
+      }
+
+      if (successfulController == null) {
+        throw StateError(
+          'Nenhuma câmera pôde ser inicializada. '
+          'Último erro: $lastError',
+        );
+      }
 
       if (!mounted) {
-        await controller.dispose();
+        await successfulController.dispose();
         return;
       }
 
       setState(() {
-        _cameraController = controller;
+        _cameraController = successfulController;
         _loadingCamera = false;
+        _errorMessage = null;
       });
     } catch (error) {
+      await successfulController?.dispose();
+
       if (!mounted) return;
 
       setState(() {
         _loadingCamera = false;
+        _cameraController = null;
         _errorMessage = 'Não foi possível abrir a câmera: $error';
       });
     }
@@ -129,6 +170,20 @@ class _OcrCapturePageState extends State<OcrCapturePage> {
     });
   }
 
+  Future<void> _retryCamera() async {
+    final oldController = _cameraController;
+
+    setState(() {
+      _cameraController = null;
+      _loadingCamera = true;
+      _errorMessage = null;
+      _result = null;
+    });
+
+    await oldController?.dispose();
+    await _initializeCamera();
+  }
+
   @override
   void dispose() {
     _cameraController?.dispose();
@@ -142,7 +197,7 @@ class _OcrCapturePageState extends State<OcrCapturePage> {
     final result = _result;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('TESTE 999')),
+      appBar: AppBar(title: const Text('Ler endereço da etiqueta')),
       body: SafeArea(
         child: Column(
           children: [
@@ -157,10 +212,28 @@ class _OcrCapturePageState extends State<OcrCapturePage> {
                     ? Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24),
-                          child: Text(
-                            _errorMessage ?? 'Câmera indisponível.',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _errorMessage ?? 'Câmera indisponível.',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              OutlinedButton.icon(
+                                onPressed: _retryCamera,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Tentar novamente'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: const BorderSide(color: Colors.white),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       )
@@ -217,35 +290,17 @@ class _OcrCapturePageState extends State<OcrCapturePage> {
                           child: Text(_errorMessage!),
                         ),
                       ),
-                    if (result != null) ...[
-                      _OcrResultCard(data: result),
-                      const SizedBox(height: 12),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const Text(
-                                'Texto bruto reconhecido pelo OCR',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 8),
-                              SelectableText(
-                                result.rawText.isEmpty
-                                    ? 'Nenhum texto reconhecido.'
-                                    : result.rawText,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                    if (result != null) _OcrResultCard(data: result),
                     const SizedBox(height: 12),
                     SizedBox(
                       height: 56,
                       child: ElevatedButton.icon(
-                        onPressed: _processing ? null : _captureAndRead,
+                        onPressed:
+                            _processing ||
+                                controller == null ||
+                                !controller.value.isInitialized
+                            ? null
+                            : _captureAndRead,
                         icon: _processing
                             ? const SizedBox(
                                 width: 22,
@@ -301,24 +356,25 @@ class _OcrResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final confidence = (data.confidence * 100).round();
+    final validAddress = data.hasValidAddress;
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              data.hasValidAddress
-                  ? 'Endereço reconhecido'
-                  : 'Leitura incompleta',
+              validAddress ? 'Endereço encontrado' : 'Leitura incompleta',
               style: Theme.of(
                 context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const Divider(),
-            _ResultLine(label: 'Transportadora', value: data.carrier),
+            const Divider(height: 24),
+            _ResultLine(
+              label: 'Transportadora',
+              value: data.carrier.isEmpty ? 'Não identificada' : data.carrier,
+            ),
             _ResultLine(
               label: 'Rua',
               value: data.street.isEmpty ? 'Não encontrada' : data.street,
@@ -335,16 +391,23 @@ class _OcrResultCard extends StatelessWidget {
                   ? 'Não encontrado'
                   : data.postalCode,
             ),
-            _ResultLine(label: 'Confiança', value: '$confidence%'),
-            const SizedBox(height: 8),
+            _ResultLine(
+              label: 'Confiança',
+              value: '${(data.confidence * 100).round()}%',
+            ),
+            const Divider(height: 24),
             ExpansionTile(
               tilePadding: EdgeInsets.zero,
+              childrenPadding: EdgeInsets.zero,
               title: const Text('Ver texto completo do OCR'),
               children: [
-                SelectableText(
-                  data.rawText.isEmpty
-                      ? 'Nenhum texto reconhecido.'
-                      : data.rawText,
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: SelectableText(
+                    data.rawText.isEmpty
+                        ? 'Nenhum texto foi reconhecido.'
+                        : data.rawText,
+                  ),
                 ),
               ],
             ),
@@ -364,12 +427,12 @@ class _ResultLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 115,
+            width: 145,
             child: Text(
               '$label:',
               style: const TextStyle(fontWeight: FontWeight.bold),
