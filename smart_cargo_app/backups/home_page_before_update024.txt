@@ -376,20 +376,39 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    if (ocrResult == null) {
+    if (ocrResult != null && ocrResult.hasValidAddress) {
+      await addPackage(
+        code: scannedCode,
+        street: ocrResult.street,
+        houseNumber: ocrResult.houseNumber,
+        type: 'Residência',
+        name: '',
+      );
+
       return;
     }
 
-    if (!ocrResult.hasValidAddress) {
+    final manualResult = await Navigator.push<ManualEntryResult>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ManualEntryPage(
+          title: 'Endereço do pacote',
+          initialStreet: ocrResult?.street ?? '',
+          initialHouseNumber: ocrResult?.houseNumber ?? '',
+        ),
+      ),
+    );
+
+    if (!mounted || manualResult == null) {
       return;
     }
 
     await addPackage(
       code: scannedCode,
-      street: ocrResult.street,
-      houseNumber: ocrResult.houseNumber,
-      type: 'Residência',
-      name: '',
+      street: manualResult.street,
+      houseNumber: manualResult.houseNumber,
+      type: manualResult.type,
+      name: manualResult.name,
     );
   }
 
