@@ -59,9 +59,7 @@ class _HomePageState extends State<HomePage> {
   void openScanner() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const ScannerPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const ScannerPage()),
     );
   }
 
@@ -70,9 +68,7 @@ class _HomePageState extends State<HomePage> {
     final stops = stopService.stops;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Smart Cargo'),
-      ),
+      appBar: AppBar(title: const Text('Smart Cargo')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -89,10 +85,7 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 8),
             Text(
               '${stopService.totalStops} paradas',
-              style: const TextStyle(
-                fontSize: 34,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold),
             ),
             Text(
               '${stopService.totalPackages} pacotes',
@@ -126,9 +119,7 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 24),
             Expanded(
               child: stops.isEmpty
-                  ? const Center(
-                      child: Text('Nenhuma parada criada ainda.'),
-                    )
+                  ? const Center(child: Text('Nenhuma parada criada ainda.'))
                   : ListView.builder(
                       itemCount: stops.length,
                       itemBuilder: (context, index) {
@@ -147,20 +138,14 @@ class _HomePageState extends State<HomePage> {
 class _StopCard extends StatelessWidget {
   final Stop stop;
 
-  const _StopCard({
-    required this.stop,
-  });
+  const _StopCard({required this.stop});
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
-        leading: CircleAvatar(
-          child: Text(stop.stopLabel),
-        ),
-        title: Text(
-          'Parada ${stop.stopLabel}  •  📦 x${stop.packageCount}',
-        ),
+        leading: CircleAvatar(child: Text(stop.stopLabel)),
+        title: Text('Parada ${stop.stopLabel}  •  📦 x${stop.packageCount}'),
         subtitle: Text(
           '${stop.address}\n'
           '${stop.neighborhood}\n'
