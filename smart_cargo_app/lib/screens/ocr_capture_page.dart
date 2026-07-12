@@ -85,6 +85,11 @@ class _OcrCapturePageState extends State<OcrCapturePage> {
     try {
       final photo = await controller.takePicture();
       final rawText = await _ocrService.readTextFromImagePath(photo.path);
+
+      debugPrint('================ OCR BRUTO ================');
+      debugPrint(rawText);
+      debugPrint('===========================================');
+
       final parsed = _parserService.parse(rawText);
 
       if (!mounted) return;
