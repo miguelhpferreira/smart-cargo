@@ -276,6 +276,8 @@ class _HomePageState extends State<HomePage> {
   final HomeController controller = HomeController();
 
   DeliveryStop? lastStop;
+  int knownLocationsCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -283,11 +285,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> loadKnownLocationsCount() async {
-    await controller.loadKnownLocationsCount();
+    final total = await LocationDatabase.instance.countKnownLocations();
 
-    if (mounted) {
-      setState(() {});
-    }
+    if (!mounted) return;
+
+    setState(() {
+      knownLocationsCount = total;
+    });
   }
 
   Future<void> addPackage({
@@ -524,7 +528,7 @@ class _HomePageState extends State<HomePage> {
                   const Icon(Icons.memory, size: 18),
                   const SizedBox(width: 6),
                   Text(
-                    '$controller.knownLocationsCount locais na memória',
+                    '$knownLocationsCount locais na memória',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],

@@ -3,10 +3,6 @@ import '../models/delivery_stop.dart';
 import '../services/database_service.dart';
 
 class HomeController extends ChangeNotifier {
-  int _knownLocationsCount = 0;
-
-  int get knownLocationsCount => _knownLocationsCount;
-
   final DatabaseService databaseService;
 
   HomeController({DatabaseService? databaseService})
@@ -39,11 +35,6 @@ class HomeController extends ChangeNotifier {
   }
 
   Future<void> loadKnownLocations() async {
-    notifyListeners();
-  }
-
-  Future<void> loadKnownLocationsCount() async {
-    _knownLocationsCount = await databaseService.countKnownLocations();
     notifyListeners();
   }
 }
