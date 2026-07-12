@@ -7,6 +7,9 @@ class DeliveryStop {
   final List<String> packageCodes;
   final bool knownLocation;
 
+  bool delivered;
+  DateTime? deliveredAt;
+
   DeliveryStop({
     required this.number,
     required this.name,
@@ -15,6 +18,8 @@ class DeliveryStop {
     required this.type,
     required this.packageCodes,
     required this.knownLocation,
+    this.delivered = false,
+    this.deliveredAt,
   });
 
   int get packages => packageCodes.length;
