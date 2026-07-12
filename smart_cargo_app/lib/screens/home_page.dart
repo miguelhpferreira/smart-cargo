@@ -7,6 +7,7 @@ import '../models/package_data.dart';
 import '../widgets/info_card.dart';
 import '../models/delivery_stop.dart';
 import '../controllers/home_controller.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class KnownLocation {
   final int? id;
@@ -283,6 +284,28 @@ class _HomePageState extends State<HomePage> {
     loadKnownLocationsCount();
   }
 
+  Future<void> openGoogleMaps(String address) async {
+    final encodedAddress = Uri.encodeComponent(address);
+
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$encodedAddress',
+    );
+
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw Exception('Não foi possível abrir o Google Maps.');
+    }
+  }
+
+  Future<void> openWaze(String address) async {
+    final encodedAddress = Uri.encodeComponent(address);
+
+    final uri = Uri.parse('https://waze.com/ul?q=$encodedAddress&navigate=yes');
+
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw Exception('Não foi possível abrir o Waze.');
+    }
+  }
+
   void _handleControllerChange() {
     if (mounted) {
       setState(() {});
@@ -473,6 +496,59 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
 
+              const SizedBox(height: 12),
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Progresso da rota',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${controller.deliveredPackages} de '
+                      '${controller.totalPackages} pacotes entregues',
+                    ),
+                    const SizedBox(height: 6),
+                    LinearProgressIndicator(
+                      value: controller.totalPackages == 0
+                          ? 0
+                          : controller.deliveredPackages /
+                                controller.totalPackages,
+                      minHeight: 10,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Entregues: ${controller.deliveredStops} paradas',
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            'Restantes: ${controller.remainingStops} paradas',
+                            textAlign: TextAlign.end,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
               const SizedBox(height: 8),
 
               Row(
@@ -586,9 +662,71 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '${currentStop.packages} pacote(s) nesta parada',
+                            currentStop.packages == 1
+                                ? '1 pacote nesta parada'
+                                : '${currentStop.packages} pacotes nesta parada',
                             style: const TextStyle(fontSize: 17),
                           ),
+
+                          const SizedBox(height: 14),
+
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () =>
+                                      openGoogleMaps(currentStop.address),
+                                  icon: const Icon(Icons.map_outlined),
+                                  label: const Text('Google Maps'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () =>
+                                      openWaze(currentStop.address),
+                                  icon: const Icon(Icons.navigation_outlined),
+                                  label: const Text('Waze'),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          SizedBox(
+                            width: double.infinity,
+                            height: 54,
+                            child: currentStop.delivered
+                                ? OutlinedButton.icon(
+                                    onPressed: () {
+                                      controller.undoDelivery(currentStop);
+                                    },
+                                    icon: const Icon(Icons.undo),
+                                    label: const Text('Desfazer entrega'),
+                                  )
+                                : ElevatedButton.icon(
+                                    onPressed: () {
+                                      controller.confirmDelivery(currentStop);
+                                    },
+                                    icon: const Icon(
+                                      Icons.check_circle_outline,
+                                    ),
+                                    label: const Text('Confirmar entrega'),
+                                  ),
+                          ),
+
+                          if (currentStop.deliveredAt != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'Entregue às '
+                              '${currentStop.deliveredAt!.hour.toString().padLeft(2, '0')}:'
+                              '${currentStop.deliveredAt!.minute.toString().padLeft(2, '0')}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
               ),
