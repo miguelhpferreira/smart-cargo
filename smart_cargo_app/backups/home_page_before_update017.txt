@@ -277,14 +277,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    controller.addListener(_handleControllerChange);
     loadKnownLocationsCount();
-  }
-
-  void _handleControllerChange() {
-    if (mounted) {
-      setState(() {});
-    }
   }
 
   Future<void> loadKnownLocationsCount() async {
@@ -685,13 +678,6 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    controller.removeListener(_handleControllerChange);
-    controller.dispose();
-    super.dispose();
   }
 }
 
