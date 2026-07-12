@@ -305,7 +305,9 @@ class _HomePageState extends State<HomePage> {
   }) async {
     if (controller.processing) return;
 
-    controller.setProcessing(true);
+    setState(() {
+      controller.setProcessing(true);
+    });
 
     try {
       final knownLocation = await LocationDatabase.instance.findLocation(
@@ -328,15 +330,17 @@ class _HomePageState extends State<HomePage> {
 
       if (!mounted) return;
 
-      controller.upsertStop(
-        code: code,
-        street: effectiveStreet,
-        houseNumber: effectiveNumber,
-        type: effectiveType,
-        name: effectiveName,
-        knownLocation: knownLocation != null,
-        createAddressKey: createAddressKey,
-      );
+      setState(() {
+        controller.upsertStop(
+          code: code,
+          street: effectiveStreet,
+          houseNumber: effectiveNumber,
+          type: effectiveType,
+          name: effectiveName,
+          knownLocation: knownLocation != null,
+          createAddressKey: createAddressKey,
+        );
+      });
 
       if (saveInMemory) {
         await LocationDatabase.instance.saveOrUpdateLocation(
@@ -350,7 +354,9 @@ class _HomePageState extends State<HomePage> {
       }
     } finally {
       if (mounted) {
-        controller.setProcessing(false);
+        setState(() {
+          controller.setProcessing(false);
+        });
       }
     }
   }
