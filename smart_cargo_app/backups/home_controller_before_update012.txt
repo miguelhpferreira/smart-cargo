@@ -33,8 +33,4 @@ class HomeController extends ChangeNotifier {
   int get commerces {
     return stops.where((stop) => stop.type == 'Comércio').length;
   }
-
-  Future<void> loadKnownLocations() async {
-    notifyListeners();
-  }
 }
