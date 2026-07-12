@@ -274,6 +274,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final HomeController controller = HomeController();
+
+  DeliveryStop? lastStop;
   @override
   void initState() {
     super.initState();
@@ -342,7 +344,7 @@ class _HomePageState extends State<HomePage> {
             existingStop!.packageCodes.add(code);
           }
 
-          controller.lastStop = existingStop;
+          lastStop = existingStop;
         } else {
           final newStop = DeliveryStop(
             number: controller.stops.length + 1,
@@ -355,7 +357,7 @@ class _HomePageState extends State<HomePage> {
           );
 
           controller.stops.add(newStop);
-          controller.lastStop = newStop;
+          lastStop = newStop;
         }
       });
 
@@ -461,13 +463,13 @@ class _HomePageState extends State<HomePage> {
 
     setState(() {
       controller.stops.clear();
-      controller.lastStop = null;
+      lastStop = null;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentStop = controller.lastStop;
+    final currentStop = lastStop;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Smart Cargo'), centerTitle: true),

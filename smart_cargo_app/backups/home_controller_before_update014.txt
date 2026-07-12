@@ -3,7 +3,6 @@ import '../models/delivery_stop.dart';
 import '../services/database_service.dart';
 
 class HomeController extends ChangeNotifier {
-  DeliveryStop? lastStop;
   int _knownLocationsCount = 0;
 
   int get knownLocationsCount => _knownLocationsCount;
