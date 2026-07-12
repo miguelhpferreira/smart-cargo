@@ -1,12 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/delivery_stop.dart';
-import '../services/database_service.dart';
 
 class HomeController extends ChangeNotifier {
-  final DatabaseService databaseService;
-
-  HomeController({DatabaseService? databaseService})
-    : databaseService = databaseService ?? DatabaseService.instance;
   final List<DeliveryStop> stops = [];
   bool _processing = false;
 
