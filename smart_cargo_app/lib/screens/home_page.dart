@@ -505,7 +505,7 @@ class _HomePageState extends State<HomePage> {
                   const Icon(Icons.memory, size: 18),
                   const SizedBox(width: 6),
                   Text(
-                    '$controller.knownLocationsCount locais na memória',
+                    '${controller.knownLocationsCount} locais na memória',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
