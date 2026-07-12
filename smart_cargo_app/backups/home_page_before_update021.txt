@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 import 'scanner_page.dart';
-import 'ocr_capture_page.dart';
-import '../models/package_data.dart';
 import '../widgets/info_card.dart';
 import '../models/delivery_stop.dart';
 import '../controllers/home_controller.dart';
@@ -367,27 +365,8 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    final ocrResult = await Navigator.push<PackageData>(
-      context,
-      MaterialPageRoute(builder: (_) => const OcrCapturePage()),
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    if (ocrResult != null && ocrResult.hasValidAddress) {
-      await addPackage(
-        code: scannedCode,
-        street: ocrResult.street,
-        houseNumber: ocrResult.houseNumber,
-        type: 'Residência',
-        name: '',
-      );
-
-      return;
-    }
-
+    // O código de barras identifica o pacote.
+    // Até ligarmos o OCR, pedimos somente o endereço.
     final manualResult = await Navigator.push<ManualEntryResult>(
       context,
       MaterialPageRoute(
