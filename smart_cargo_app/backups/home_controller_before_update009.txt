@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
-import '../models/delivery_stop.dart';
 
 class HomeController extends ChangeNotifier {
-  final List<DeliveryStop> stops = [];
   bool _processing = false;
 
   bool get processing => _processing;

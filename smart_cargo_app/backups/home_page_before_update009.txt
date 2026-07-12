@@ -274,6 +274,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final HomeController controller = HomeController();
+  final List<DeliveryStop> stops = [];
 
   DeliveryStop? lastStop;
   int knownLocationsCount = 0;
@@ -285,22 +286,19 @@ class _HomePageState extends State<HomePage> {
   }
 
   int get totalPackages {
-    return controller.stops.fold(
-      0,
-      (total, stop) => total + stop.packageCodes.length,
-    );
+    return stops.fold(0, (total, stop) => total + stop.packageCodes.length);
   }
 
   int get condominiums {
-    return controller.stops.where((stop) => stop.type == 'Condomínio').length;
+    return stops.where((stop) => stop.type == 'Condomínio').length;
   }
 
   int get residences {
-    return controller.stops.where((stop) => stop.type == 'Residência').length;
+    return stops.where((stop) => stop.type == 'Residência').length;
   }
 
   int get commerces {
-    return controller.stops.where((stop) => stop.type == 'Comércio').length;
+    return stops.where((stop) => stop.type == 'Comércio').length;
   }
 
   Future<void> loadKnownLocationsCount() async {
@@ -350,7 +348,7 @@ class _HomePageState extends State<HomePage> {
 
       DeliveryStop? existingStop;
 
-      for (final stop in controller.stops) {
+      for (final stop in stops) {
         final existingKey = createAddressKey(stop.street, stop.houseNumber);
 
         if (existingKey == newKey) {
@@ -370,7 +368,7 @@ class _HomePageState extends State<HomePage> {
           lastStop = existingStop;
         } else {
           final newStop = DeliveryStop(
-            number: controller.stops.length + 1,
+            number: stops.length + 1,
             name: effectiveName,
             street: effectiveStreet,
             houseNumber: effectiveNumber,
@@ -379,7 +377,7 @@ class _HomePageState extends State<HomePage> {
             knownLocation: knownLocation != null,
           );
 
-          controller.stops.add(newStop);
+          stops.add(newStop);
           lastStop = newStop;
         }
       });
@@ -485,7 +483,7 @@ class _HomePageState extends State<HomePage> {
     if (confirm != true || !mounted) return;
 
     setState(() {
-      controller.stops.clear();
+      stops.clear();
       lastStop = null;
     });
   }
@@ -511,7 +509,7 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   InfoCard(title: 'Pacotes', value: totalPackages),
                   const SizedBox(width: 8),
-                  InfoCard(title: 'Paradas', value: controller.stops.length),
+                  InfoCard(title: 'Paradas', value: stops.length),
                 ],
               ),
 
@@ -659,7 +657,7 @@ class _HomePageState extends State<HomePage> {
                 width: double.infinity,
                 height: 52,
                 child: OutlinedButton.icon(
-                  onPressed: controller.stops.isEmpty || controller.processing
+                  onPressed: stops.isEmpty || controller.processing
                       ? null
                       : resetLoad,
                   icon: const Icon(Icons.restart_alt),
@@ -672,7 +670,7 @@ class _HomePageState extends State<HomePage> {
                 const CircularProgressIndicator(),
               ],
 
-              if (controller.stops.isNotEmpty) ...[
+              if (stops.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 Align(
                   alignment: Alignment.centerLeft,
@@ -686,11 +684,11 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 8),
 
                 ListView.builder(
-                  itemCount: controller.stops.length,
+                  itemCount: stops.length,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemBuilder: (context, index) {
-                    final stop = controller.stops[index];
+                    final stop = stops[index];
 
                     return Card(
                       child: ListTile(
