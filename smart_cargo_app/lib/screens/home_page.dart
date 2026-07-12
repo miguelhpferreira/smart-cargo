@@ -306,6 +306,20 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void openNextGoogleMaps() {
+    final next = controller.nextPendingStop;
+    if (next == null) return;
+
+    openGoogleMaps(next.address);
+  }
+
+  void openNextWaze() {
+    final next = controller.nextPendingStop;
+    if (next == null) return;
+
+    openWaze(next.address);
+  }
+
   void _handleControllerChange() {
     if (mounted) {
       setState(() {});
@@ -497,6 +511,52 @@ class _HomePageState extends State<HomePage> {
               ),
 
               const SizedBox(height: 12),
+
+              if (controller.nextPendingStop != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Próxima parada',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(controller.nextPendingStop!.name),
+                      Text(controller.nextPendingStop!.address),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: openNextGoogleMaps,
+                              icon: const Icon(Icons.map_outlined),
+                              label: const Text('Google Maps'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: openNextWaze,
+                              icon: const Icon(Icons.navigation_outlined),
+                              label: const Text('Waze'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
 
               Container(
                 width: double.infinity,
