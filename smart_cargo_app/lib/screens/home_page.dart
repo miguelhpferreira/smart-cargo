@@ -394,6 +394,47 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<String?> selectLocationType() async {
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return SimpleDialog(
+          title: const Text('Tipo do local'),
+          children: [
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(dialogContext, 'Residência'),
+              child: const ListTile(
+                leading: Icon(Icons.home_outlined),
+                title: Text('Residência'),
+              ),
+            ),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(dialogContext, 'Condomínio'),
+              child: const ListTile(
+                leading: Icon(Icons.apartment_outlined),
+                title: Text('Condomínio'),
+              ),
+            ),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(dialogContext, 'Comércio'),
+              child: const ListTile(
+                leading: Icon(Icons.store_outlined),
+                title: Text('Comércio'),
+              ),
+            ),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(dialogContext, 'Outro'),
+              child: const ListTile(
+                leading: Icon(Icons.place_outlined),
+                title: Text('Outro'),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> openScanner() async {
     final scannedCode = await Navigator.push<String>(
       context,
@@ -421,11 +462,17 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+    final selectedType = await selectLocationType();
+
+    if (!mounted || selectedType == null) {
+      return;
+    }
+
     await addPackage(
       code: scannedCode,
       street: ocrResult.street,
       houseNumber: ocrResult.houseNumber,
-      type: 'Residência',
+      type: selectedType,
       name: '',
     );
   }
